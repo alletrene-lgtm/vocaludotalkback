@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14131B">
+<title>Pas à Pas – Apprendre TalkBack en s'amusant</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  :root{
+    --bg:#14131B;
+    --surface:#1E1D29;
+    --surface-2:#262536;
+    --text:#F5F1E6;
+    --muted:#A9A6BB;
+    --accent:#F2B705;
+    --accent-2:#3ECF8E;
+    --radius:20px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height:100dvh;
+    line-height:1.5;
+  }
+  #app{ max-width:560px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column; padding:24px 20px 40px; }
+  .screen{ display:flex; flex-direction:column; gap:20px; flex:1; }
+
+  .eyebrow{ color:var(--accent); text-transform:uppercase; letter-spacing:.14em; font-size:.8rem; font-weight:700; margin:0; }
+  h1{ font-size:clamp(2.2rem,9vw,2.8rem); margin:0 0 4px; font-weight:800; letter-spacing:-0.01em; }
+  h2{ font-size:1.1rem; margin:0; }
+
+  .trail{ display:flex; gap:6px; font-size:1.6rem; align-items:flex-end; }
+  .trail .footprint{ filter:grayscale(1) opacity(.35); display:inline-block; }
+  .trail .footprint:nth-child(even){ transform:translateY(6px); }
+  .trail .footprint.done{ filter:none; text-shadow:0 0 12px rgba(242,183,5,.5); }
+
+  .home-sub{ color:var(--muted); font-size:1rem; margin:0; }
+
+  .btn-primary{
+    background:var(--accent); color:#1A1400; border:none; border-radius:999px;
+    padding:16px 24px; font-size:1.15rem; font-weight:700; cursor:pointer;
+  }
+  .btn-primary:focus-visible{ outline:3px solid var(--accent-2); outline-offset:3px; }
+
+  .btn-quiet{
+    background:transparent; color:var(--muted); border:1px solid var(--surface-2);
+    border-radius:999px; padding:10px 16px; font-size:.95rem; cursor:pointer;
+  }
+  .btn-quiet:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+
+  .btn-link{ background:none; border:none; color:var(--muted); text-decoration:underline; font-size:.9rem; padding:8px 0; cursor:pointer; align-self:flex-start; }
+
+  .menu-heading{ margin-top:8px; color:var(--muted); font-weight:700; font-size:.95rem; text-transform:uppercase; letter-spacing:.08em; }
+
+  .level-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .level-item{
+    width:100%; display:flex; align-items:center; gap:14px; background:var(--surface);
+    border:2px solid transparent; border-radius:16px; padding:14px 16px; color:var(--text);
+    text-align:left; cursor:pointer; font-size:1rem;
+  }
+  button.level-item:focus-visible{ outline:3px solid var(--accent); outline-offset:2px; }
+  .level-item.disabled{ opacity:.55; }
+  .level-item-emoji{ font-size:1.6rem; }
+  .level-item-text{ display:flex; flex-direction:column; }
+  .level-item-title{ font-weight:700; }
+  .level-item-desc{ color:var(--muted); font-size:.88rem; }
+
+  .howto{ background:var(--surface); border-radius:14px; padding:12px 16px; color:var(--muted); }
+  .howto summary{ color:var(--text); font-weight:700; cursor:pointer; }
+  .howto p{ margin:10px 0 0; font-size:.92rem; }
+
+  .level-topbar{ display:flex; justify-content:space-between; align-items:center; }
+  .level-tag{ color:var(--muted); font-weight:700; }
+
+  .stage{ background:var(--surface); border-radius:var(--radius); padding:24px; min-height:96px; display:flex; align-items:center; }
+  .stage-text{ margin:0; font-size:clamp(1.3rem,5.5vw,1.7rem); font-weight:700; }
+
+  .search-controls{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+  .search-status{ color:var(--muted); font-weight:700; margin:0; }
+
+  .cards-zone{ display:flex; gap:12px; flex-wrap:wrap; }
+  .cards-zone.cards-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+
+  .card{
+    flex:1 1 0; min-width:120px; min-height:110px; background:var(--surface-2);
+    border:2px solid transparent; border-radius:16px; color:var(--text);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:8px; padding:14px 8px; font-size:1rem; cursor:pointer;
+  }
+  .card:focus-visible{ outline:none; border-color:var(--accent); box-shadow:0 0 0 4px rgba(242,183,5,.25); }
+  .card-number{ font-weight:700; font-size:1.15rem; }
+  .card-emoji{ font-size:2rem; }
+  .card-label{ text-align:center; }
+
+  .complete-screen{ align-items:center; text-align:center; justify-content:center; gap:16px; }
+  .complete-emoji{ font-size:3.4rem; margin:0; }
+  .complete-sub{ color:var(--muted); margin:0; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* =========================================================
+     STOCKAGE DE LA PROGRESSION
+     ========================================================= */
+  var STORAGE_KEY = 'pasapas_progress_v2';
+
+  function loadProgress(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return { completed: [] };
+      var parsed = JSON.parse(raw);
+      if(!parsed || !Array.isArray(parsed.completed)) return { completed: [] };
+      return parsed;
+    }catch(e){ return { completed: [] }; }
+  }
+  function saveProgress(p){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }catch(e){}
+  }
+  var progress = loadProgress();
+
+  /* =========================================================
+     COACH VOCAL (speechSynthesis)
+     On annule uniquement NOTRE PROPRE file d'attente avant de parler
+     (jamais celle de TalkBack, qu'on ne contrôle pas et qu'on laisse
+     s'exprimer librement quand il annonce les cases au focus).
+     ========================================================= */
+  var frenchVoice = null;
+  function pickVoice(){
+    if(!('speechSynthesis' in window)) return;
+    var voices = speechSynthesis.getVoices();
+    frenchVoice = voices.find(function(v){ return v.lang && v.lang.toLowerCase().indexOf('fr') === 0; }) || null;
+  }
+  if('speechSynthesis' in window){
+    pickVoice();
+    speechSynthesis.addEventListener('voiceschanged', pickVoice);
+  }
+  function speak(text, onend){
+    if(!('speechSynthesis' in window)){ if(onend) onend(); return; }
+    speechSynthesis.cancel();
+    var utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'fr-FR';
+    if(frenchVoice) utter.voice = frenchVoice;
+    utter.rate = 1;
+    if(onend) utter.addEventListener('end', onend, { once:true });
+    speechSynthesis.speak(utter);
+  }
+  function stopSpeaking(){
+    if('speechSynthesis' in window) speechSynthesis.cancel();
+  }
+
+  /* =========================================================
+     SONS (WebAudio, aucun fichier externe)
+     ========================================================= */
+  var audioCtx = null;
+  function ctx(){
+    if(!audioCtx){
+      var AC = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AC();
+    }
+    return audioCtx;
+  }
+  function tone(freq, start, duration, gain){
+    try{
+      var c = ctx();
+      var osc = c.createOscillator();
+      var g = c.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      g.gain.value = 0;
+      osc.connect(g); g.connect(c.destination);
+      var t0 = c.currentTime + start;
+      g.gain.linearRampToValueAtTime(gain, t0 + 0.02);
+      g.gain.linearRampToValueAtTime(0, t0 + duration);
+      osc.start(t0);
+      osc.stop(t0 + duration + 0.05);
+    }catch(e){ /* audio indisponible, on ignore silencieusement */ }
+  }
+  function chimeSuccess(){ tone(660,0,0.14,0.18); tone(880,0.1,0.18,0.18); }
+  function chimeBigSuccess(){ tone(523,0,0.12,0.18); tone(659,0.1,0.12,0.18); tone(784,0.2,0.22,0.2); }
+  function chimeSoft(){ tone(392,0,0.12,0.12); }
+
+  function stopAll(){ stopSpeaking(); }
+
+  /* =========================================================
+     JEU 1 : "Avancer, reculer, chercher" — retrouver les chiffres
+     de 1 à 6 dans l'ordre, en explorant une grille du bout du doigt.
+
+     Pourquoi l'exploration tactile plutôt que le balayage haut/bas :
+     un balayage (flick) vers le haut ou le bas n'est PAS traduit par
+     TalkBack en déplacement du focus (par défaut il change la
+     granularité de lecture). En revanche l'exploration tactile
+     (glisser le doigt SANS le lever) suit la position physique du
+     doigt dans toutes les directions et déclenche un événement
+     "focus" sur l'élément survolé — c'est ce mécanisme qu'on utilise
+     ici, il fonctionne aussi bien avec un balayage droite/gauche
+     classique qu'avec une exploration libre en tous sens.
+     ========================================================= */
+  var NUMBER_WORDS = { 1:'Un', 2:'Deux', 3:'Trois', 4:'Quatre', 5:'Cinq', 6:'Six' };
+  var SUCCESS_FIND = [
+    "Voilà le premier, bien joué !",
+    "Parfait, tu avances dans l'ordre !",
+    "Continue, tu y es presque !",
+    "Super, encore un peu !",
+    "Génial, plus qu'un chiffre !"
+  ];
+
+  function shuffledNumbers(){
+    var arr = [1,2,3,4,5,6];
+    for(var i = arr.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+
+  function buildNumberSearchLevel(container, api){
+    var MAX_ESSAIS = 3;
+    var state = { essai: 1, expected: 1 };
+
+    // Bloc de contrôle (statut + bouton de nouvel essai), inséré une
+    // seule fois au-dessus de la grille, et mis à jour à chaque tour.
+    var controls = document.createElement('div');
+    controls.className = 'search-controls';
+    var statusEl = document.createElement('p');
+    statusEl.className = 'search-status';
+    var restartBtn = document.createElement('button');
+    restartBtn.type = 'button';
+    restartBtn.className = 'btn-quiet';
+    controls.appendChild(statusEl);
+    controls.appendChild(restartBtn);
+    container.parentNode.insertBefore(controls, container);
+
+    function updateStatus(){
+      statusEl.textContent = 'Essai ' + state.essai + ' sur ' + MAX_ESSAIS;
+      restartBtn.textContent = state.essai < MAX_ESSAIS
+        ? 'Recommencer avec un nouveau mélange'
+        : 'Terminer cette manche';
+    }
+
+    function renderBoard(){
+      var nums = shuffledNumbers();
+      container.innerHTML = '';
+      container.className = 'cards-zone cards-grid';
+      var cards = nums.map(function(n){
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'card card-number';
+        btn.dataset.value = String(n);
+        btn.textContent = n + ' (' + NUMBER_WORDS[n] + ')';
+        container.appendChild(btn);
+        return btn;
+      });
+      cards.forEach(function(card){
+        card.addEventListener('focus', function(){
+          var val = Number(card.dataset.value);
+          if(val !== state.expected) return; // chiffre hors-ordre : on ignore, pas de pénalité
+          card.textContent = card.textContent + ' — trouvé !';
+          chimeSuccess();
+          if(state.expected < 6){
+            var msg = SUCCESS_FIND[(state.expected - 1) % SUCCESS_FIND.length];
+            api.setStageText(msg); speak(msg);
+            state.expected++;
+          }else{
+            api.complete("Bravo, tu as retrouvé les six chiffres dans l'ordre ! Tu marques six points.");
+          }
+        });
+      });
+      cards[0].focus();
+      updateStatus();
+    }
+
+    restartBtn.addEventListener('click', function(){
+      if(state.essai < MAX_ESSAIS){
+        state.essai++;
+        state.expected = 1;
+        renderBoard();
+        var msg = 'Nouveau mélange ! Essai ' + state.essai + ' sur ' + MAX_ESSAIS + '.';
+        api.setStageText(msg); speak(msg); chimeSoft();
+      }else{
+        api.fail("Pas grave, tu feras encore mieux la prochaine fois. Score : zéro point pour cette manche.");
+      }
+    });
+
+    renderBoard();
+  }
+
+  var LEVELS = [
+    {
+      id: 'search-numbers',
+      title: 'Avancer, reculer, chercher',
+      menuLabel: 'Retrouver les chiffres de 1 à 6',
+      intro: "Pose un doigt sur l'écran et glisse-le dans toutes les directions, à gauche, à droite, vers le haut, vers le bas, pour retrouver les nombres de un à six, dans l'ordre. Si tu tombes sur le trois avant d'avoir trouvé le deux, reviens en arrière pour chercher le deux, et continue ainsi jusqu'au six. Tu as trois essais pour réussir d'une seule traite.",
+      build: buildNumberSearchLevel
+    }
+  ];
+  // Deuxième jeu prévu, pas encore défini : ajouter un objet ici
+  // (id, title, menuLabel, intro, build) suffira à l'activer.
+  var TOTAL_GAMES_PLANNED = 2;
+
+  /* =========================================================
+     ECRANS
+     ========================================================= */
+  function renderHome(){
+    stopAll();
+    var app = document.getElementById('app');
+    var nextIndex = LEVELS.findIndex(function(l){ return progress.completed.indexOf(l.id) === -1; });
+    var allDone = nextIndex === -1;
+    var ctaLabel = progress.completed.length === 0 ? 'Commencer l’aventure' : (allDone ? 'Rejouer' : 'Continuer l’aventure');
+
+    var footprints = '';
+    for(var i = 0; i < TOTAL_GAMES_PLANNED; i++){
+      var done = LEVELS[i] && progress.completed.indexOf(LEVELS[i].id) !== -1;
+      footprints += '<span class="footprint' + (done ? ' done' : '') + '">👣</span>';
+    }
+
+    var levelItems = LEVELS.map(function(l, i){
+      var done = progress.completed.indexOf(l.id) !== -1;
+      return '<li><button class="level-item" data-index="' + i + '">' +
+        '<span class="level-item-emoji" aria-hidden="true">' + (done ? '👣' : '🎮') + '</span>' +
+        '<span class="level-item-text">' +
+          '<span class="level-item-title">' + l.title + (done ? ' — réussi' : '') + '</span>' +
+          '<span class="level-item-desc">' + l.menuLabel + '</span>' +
+        '</span>' +
+      '</button></li>';
+    }).join('');
+
+    if(LEVELS.length < TOTAL_GAMES_PLANNED){
+      levelItems += '<li><div class="level-item disabled">' +
+        '<span class="level-item-emoji" aria-hidden="true">🔒</span>' +
+        '<span class="level-item-text">' +
+          '<span class="level-item-title">Deuxième jeu</span>' +
+          '<span class="level-item-desc">Bientôt disponible</span>' +
+        '</span>' +
+      '</div></li>';
+    }
+
+    app.innerHTML =
+      '<div class="screen home-screen">' +
+        '<p class="eyebrow">Un jeu vocal pour apprivoiser TalkBack</p>' +
+        '<h1>Pas à Pas</h1>' +
+        '<div class="trail" aria-hidden="true">' + footprints + '</div>' +
+        '<p class="home-sub">Active TalkBack, pose ton doigt sur l\'écran, et laisse-toi guider par la voix.</p>' +
+        '<button class="btn-primary" id="btn-cta">' + ctaLabel + '</button>' +
+        '<details class="howto">' +
+          '<summary>Comment ça marche ?</summary>' +
+          '<p>Active d\'abord TalkBack sur ton téléphone si ce n\'est pas déjà fait. Pose ensuite un doigt sur l\'écran et glisse-le pour explorer : TalkBack annonce chaque case que tu touches. Le jeu te guide à la voix, prends ton temps, il n\'y a pas de mauvaise réponse, seulement des essais.</p>' +
+        '</details>' +
+        '<h2 class="menu-heading">Les jeux</h2>' +
+        '<ul class="level-list">' + levelItems + '</ul>' +
+        '<button class="btn-link" id="btn-reset">Remettre ma progression à zéro</button>' +
+      '</div>';
+
+    document.getElementById('btn-cta').addEventListener('click', function(){
+      renderLevel(allDone ? 0 : nextIndex);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('button.level-item'), function(btn){
+      btn.addEventListener('click', function(){ renderLevel(Number(btn.dataset.index)); });
+    });
+    document.getElementById('btn-reset').addEventListener('click', function(){
+      if(window.confirm('Remettre toute la progression à zéro ?')){
+        progress = { completed: [] };
+        saveProgress(progress);
+        renderHome();
+      }
+    });
+  }
+
+  function renderLevel(index){
+    stopAll();
+    var level = LEVELS[index];
+    var app = document.getElementById('app');
+    app.innerHTML =
+      '<div class="screen level-screen">' +
+        '<div class="level-topbar">' +
+          '<button class="btn-quiet" id="btn-menu">Retour au menu</button>' +
+          '<span class="level-tag">' + level.title + '</span>' +
+        '</div>' +
+        '<div class="stage" aria-hidden="true"><p class="stage-text" id="stage-text">' + level.intro + '</p></div>' +
+        '<div class="cards-zone" id="cards-zone"></div>' +
+      '</div>';
+
+    document.getElementById('btn-menu').addEventListener('click', function(){ renderHome(); });
+    var stageText = document.getElementById('stage-text');
+    var cardsZone = document.getElementById('cards-zone');
+
+    function setStageText(t){ stageText.textContent = t; }
+
+    function complete(finalMessage){
+      if(progress.completed.indexOf(level.id) === -1){
+        progress.completed.push(level.id);
+        saveProgress(progress);
+      }
+      chimeBigSuccess();
+      setStageText(finalMessage);
+      speak(finalMessage, function(){ renderLevelResult(index, 6); });
+    }
+
+    function fail(finalMessage){
+      setStageText(finalMessage);
+      speak(finalMessage, function(){ renderLevelResult(index, 0); });
+    }
+
+    speak(level.intro, function(){
+      level.build(cardsZone, { setStageText: setStageText, complete: complete, fail: fail });
+    });
+  }
+
+  function renderLevelResult(index, score){
+    var level = LEVELS[index];
+    var success = score === 6;
+    var app = document.getElementById('app');
+    app.innerHTML =
+      '<div class="screen complete-screen">' +
+        '<p class="complete-emoji" aria-hidden="true">' + (success ? '🎉' : '🌱') + '</p>' +
+        '<h2>' + (success ? 'Bravo, tu as réussi !' : 'Ce sera pour une prochaine fois') + '</h2>' +
+        '<p class="complete-sub">Score : ' + score + (score > 1 ? ' points' : ' point') + '</p>' +
+        (success
+          ? '<button class="btn-primary" id="btn-menu2">Retour au menu</button>'
+          : '<button class="btn-primary" id="btn-retry">Réessayer</button><button class="btn-quiet" id="btn-menu2">Retour au menu</button>')  +
+      '</div>';
+    if(!success){
+      document.getElementById('btn-retry').addEventListener('click', function(){ renderLevel(index); });
+    }
+    document.getElementById('btn-menu2').addEventListener('click', renderHome);
+    var toFocus = document.getElementById('btn-retry') || document.getElementById('btn-menu2');
+    toFocus.focus();
+  }
+
+  /* =========================================================
+     INITIALISATION
+     ========================================================= */
+  document.addEventListener('DOMContentLoaded', renderHome);
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
